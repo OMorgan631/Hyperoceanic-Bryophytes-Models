@@ -17,7 +17,7 @@ ORCiD: 0009-0005-0653-3777
 
 scholar: https://scholar.google.com/citations?user=-0-i_NQAAAAJ&hl=en&authuser=1
 
-## Education, Experience & Interests
+# Education, Experience & Interests
 
 In my prior education, I gained a BSc (Hons) in Biosciences at Swansea University, researching the effect that regular habitat disturbance had on grassland habitats. I also undertook a number of professional conservation reports including Preliminary Ecological Appraisal Reports, Phase 1 Habitat Surveys and a River Habitat Survey. 
 
@@ -27,7 +27,7 @@ During my masters research project I undertook a modelling study to analyze the 
 
 In my spare time I enjoy the process of active management of several investment portfolios, utilizing optimization strategies and employing rigorous risk management techniques. I am also committed to my physical wellbeng through long distance running and weightlifting activities. 
 
-## OPTIONAL
+# OPTIONAL
 pronouns: he/him/his
 
 linkedin: https://www.linkedin.com/in/oliver-b-morgan/
