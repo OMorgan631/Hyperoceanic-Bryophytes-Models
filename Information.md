@@ -26,7 +26,6 @@ During my masters research project I undertook a modelling study to analyze the 
 
 
 In my spare time I enjoy the process of active management of several investment portfolios, utilizing optimization strategies and employing rigorous risk management techniques. I am also committed to my physical wellbeng through long distance running and weightlifting activities. 
-"
 
 ## OPTIONAL
 pronouns: he/him/his
