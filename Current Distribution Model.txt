@@ -1,0 +1,541 @@
+## -------------------------------------------
+##
+## Script Name: Current Distribution Mode.R
+##
+## Purpose of the script: This script uses pre-existing record data for nine
+## hyperoceanic bryophyte species. Three species (Daltonia splachnoides, Colura
+## calyptrifolia and Lejeunea patens) were identified during field observations
+## and the remaining six are threatened from extinction. These records are used
+## to create one species distribution model for each species using five model
+## methods with 10 replicates for each method. 
+##
+## Author: Oliver Morgan - Swansea University MRes Student
+##
+## Date Created: September 2023
+##
+## Email: o.morgan631@gmail.com
+##
+## -------------------------------------------
+
+
+### We use these packages to enable a a number of functions.
+
+library("sdm")
+library("maptools")
+library("raster")
+library("dismo")
+library("geodata")
+library(corrplot)
+library(kernlab)
+library(e1071)
+library(earth)
+library(randomForest)
+library(sdm)
+library(devtools)
+library(remotes)
+library(mecofun)
+library(usdm)
+library("mapview")
+
+## Here we download climatic data from the worldclim database. 
+
+bio <- raster::getData('worldclim',var='bio',res=2.5)
+bio
+
+## Here we crop the worldclim data to the UK for plotting.
+
+UK_extentcurrent <- extent(-12,2,49,60)
+
+## Worldclim temperature data is stored as °C * 10. Here we return temperature
+## values to true values. Bio3 is also stored 
+
+bio[["bio1"]] <- bio[["bio1"]]/10
+bio[["bio2"]] <- bio[["bio2"]]/10
+bio[["bio3"]] <- bio[["bio3"]]/100
+bio[["bio5"]] <- bio[["bio5"]]/10
+bio[["bio6"]] <- bio[["bio6"]]/10
+bio[["bio7"]] <- bio[["bio7"]]/10
+bio[["bio8"]] <- bio[["bio8"]]/10
+bio[["bio9"]] <- bio[["bio9"]]/10
+bio[["bio10"]] <- bio[["bio10"]]/10
+bio[["bio11"]] <- bio[["bio11"]]/10
+
+## Here we test for multicolinearity and remove variables that are highly correlated.
+
+v1 <- vifstep(as.data.frame(bio))
+climatefocus1 <- exclude(bio, v1)
+UK_Data_current1 <- crop(climatefocus1, UK_extentcurrent)
+
+## We can inspect the worldclim data of the UK. 
+
+plot(UK_Data_current1[[1]])
+
+###############################################################################
+
+## Daltonia splachnoides
+
+## Here we download species occurrence records.
+
+sp <- gbif("Daltonia", "splachnoides", download = T, geo=T, sp=F)
+
+class(sp)
+
+w <- which(is.na(sp$lon))
+sp <- sp[-w,]
+w <- which(is.na(sp$lat))
+sp$species <- 1
+sp <- sp[,c('lon', 'lat','species')]
+head(sp)
+
+# convert to spatial point
+
+coordinates(sp) <- ~lon + lat
+class(sp)
+head(sp)
+
+par(mfrow=c(1,1))
+plot(UK_Data_current1[[1]])
+points(sp, cex=0.5, pch=16)
+
+proj4string(sp) <- projection(raster())
+mapview(sp)
+
+head(sp)
+nrow(sp)
+
+d <- sdmData(species~., sp, predictors = UK_Data_current1, bg = list(n=1000))
+d
+
+getmethodNames()
+m <- sdm(species~., d, methods = c('glm', 'svm', 'rf', 'brt', 'mars'), replications=c('boot'),n=10)
+
+m
+
+p <- predict(m, UK_Data_current1)
+p
+
+plot(p[[26]], xlim=c(-12, 5), ylim=c(48, 64), xlab="Longitude", ylab="Latitude", main="Daltonia splachnoides (W.J.Hooker & Taylor, 1818)")
+
+## Here we can visually inspect the data to see which model method best
+## explains the output by changing the selected column above [[1]] / [[3]]
+
+points(sp, cex=0.5, pch=16)
+###############################################################################
+
+## Acrobolbus wilsonii
+
+## Here we download species occurrence records.
+
+spAW <- gbif("Acrobolbus ", "wilsonii", download = T, geo=T, sp=F)
+
+class(spAW)
+
+wAW <- which(is.na(spAW$lon))
+spAW <- spAW[-wAW,]
+wAW <- which(is.na(spAW$lat))
+spAW$species <- 1
+spAW <- spAW[,c('lon', 'lat','species')]
+head(spAW)
+
+# convert to spatial point
+
+coordinates(spAW) <- ~lon + lat
+class(spAW)
+head(spAW)
+
+plot(UK_Data_current1[[1]])
+points(spAW, cex=0.5, pch=16)
+
+proj4string(spAW) <- projection(raster())
+mapview(spAW)
+
+head(spAW)
+nrow(spAW)
+
+
+dAW <- sdmData(species~., spAW, predictors = UK_Data_current1, bg = list(n=1000))
+dAW
+
+getmethodNames()
+mAW <- sdm(species~., dAW, methods = c('glm', 'svm', 'rf', 'brt', 'mars'), replications=c('boot'),n=10)
+
+mAW
+
+pAW <- predict(mAW, UK_Data_current1)
+pAW
+
+plot(pAW[[26]], xlim=c(-12, 5), ylim=c(48, 64), xlab="Longitude", ylab="Latitude", main="Acrobolbus wilsonii, VU")
+
+## A good rule of thumb if your machine is struggling with the modelling is to
+## free unused R memory as this may speed up run times. 
+###############################################################################
+
+## Lejeunea mandonii
+
+## Here we download species occurrence records.
+
+spCS <- gbif("Lejeunea ", "mandonii", download = T, geo=T, sp=F)
+
+class(spCS)
+
+wCS <- which(is.na(spCS$lon))
+spCS <- spCS[-wCS,]
+wCS <- which(is.na(spCS$lat))
+spCS$species <- 1
+spCS <- spCS[,c('lon', 'lat','species')]
+head(spCS)
+
+# convert to spatial point
+
+coordinates(spCS) <- ~lon + lat
+class(spCS)
+head(spCS)
+
+plot(UK_Data_current1[[1]])
+points(spCS, cex=0.5, pch=16)
+
+proj4string(spCS) <- projection(raster())
+mapview(spAW)
+
+head(spCS)
+nrow(spCS)
+
+
+dCS <- sdmData(species~., spCS, predictors = UK_Data_current1, bg = list(n=1000))
+dCS
+
+getmethodNames()
+mCS <- sdm(species~., dCS, methods = c('glm', 'svm', 'rf', 'brt', 'mars'), replications=c('boot'),n=10)
+
+mCS
+
+pCS <- predict(mCS, UK_Data_current1)
+pCS
+
+plot(pCS[[27]], xlim=c(-12, 5), ylim=c(48, 64), xlab="Longitude", ylab="Latitude", main="Lejeunea mandonii")
+
+###############################################################################
+
+## Metzgeria leptoneura
+
+## Here we download species occurrence records.
+
+spML <- gbif("Metzgeria ", "leptoneura", download = T, geo=T, sp=F)
+
+class(spML)
+
+wML <- which(is.na(spML$lon))
+spML <- spML[-wML,]
+wML <- which(is.na(spML$lat))
+spML$species <- 1
+spML <- spML[,c('lon', 'lat','species')]
+head(spML)
+
+# convert to spatial point
+
+coordinates(spML) <- ~lon + lat
+class(spML)
+head(spML)
+
+plot(UK_Data_current[[1]])
+points(spML, cex=0.5, pch=16)
+
+proj4string(spML) <- projection(raster())
+mapview(spML)
+
+head(spML)
+nrow(spML)
+
+
+dML <- sdmData(species~., spML, predictors = UK_Data_current1, bg = list(n=1000))
+dML
+
+getmethodNames()
+mML <- sdm(species~., dML, methods = c('glm', 'svm', 'rf', 'brt', 'mars'), replications=c('boot'),n=10)
+
+mML
+
+pML <- predict(mML, UK_Data_current1)
+pML
+
+plot(pML[[22]], xlim=c(-12, 5), ylim=c(48, 64), xlab="Longitude", ylab="Latitude", main="Metzgeria leptoneura")
+
+###############################################################################
+
+## Radula carringtonii
+
+## Here we download species occurrence records.
+
+spRC <- gbif("Radula ", "carringtonii", download = T, geo=T, sp=F)
+
+class(spRC)
+
+wRC <- which(is.na(spRC$lon))
+spRC <- spRC[-wRC,]
+wRC <- which(is.na(spRC$lat))
+spRC$species <- 1
+spRC <- spRC[,c('lon', 'lat','species')]
+head(spRC)
+
+# convert to spatial point
+
+coordinates(spRC) <- ~lon + lat
+class(spRC)
+head(spRC)
+
+plot(UK_Data_current1[[1]])
+points(spRC, cex=0.5, pch=16)
+
+proj4string(spRC) <- projection(raster())
+mapview(spRC)
+
+head(spRC)
+nrow(spRC)
+
+
+dRC <- sdmData(species~., spRC, predictors = UK_Data_current1, bg = list(n=1000))
+dRC
+
+getmethodNames()
+mRC <- sdm(species~., dRC, methods = c('glm', 'svm', 'rf', 'brt', 'mars'), replications=c('boot'),n=10)
+
+mRC
+
+pRC <- predict(mRC, UK_Data_current1)
+pRC
+
+plot(pRC[[5]], xlim=c(-12, 5), ylim=c(48, 64), xlab="Longitude", ylab="Latitude", main="Radula carringtonii")
+
+###############################################################################
+
+## Radula holtii
+
+## Here we download species occurrence records.
+
+spRH <- gbif("Radula ", "holtii", download = T, geo=T, sp=F)
+
+class(spRH)
+
+wRH <- which(is.na(spRH$lon))
+spRH <- spRH[-wRH,]
+wRH <- which(is.na(spRH$lat))
+spRH$species <- 1
+spRH <- spRH[,c('lon', 'lat','species')]
+head(spRH)
+
+# convert to spatial point
+
+coordinates(spRH) <- ~lon + lat
+class(spRH)
+head(spRH)
+
+plot(UK_Data_current1[[1]], xlim=c(-12, 5), ylim=c(48, 64))
+points(spRH, cex=0.5, pch=16)
+
+proj4string(spRH) <- projection(raster())
+mapview(spRH)
+
+head(spRH)
+nrow(spRH)
+
+dRH<- sdmData(species~., spRH, predictors = UK_Data_current1, bg = list(n=1000))
+dRH
+
+getmethodNames()
+mRH <- sdm(species~., dRH, methods = c('glm', 'svm', 'rf', 'brt', 'mars'), replications=c('boot'),n=10)
+
+mRH
+
+pRH <- predict(mRH, UK_Data_current1)
+pRH
+
+plot(pRH[[27]], xlim=c(-12, 5), ylim=c(48, 64), xlab="Longitude", ylab="Latitude", main="Radula holtii")
+
+###############################################################################
+
+## Radula voluta
+
+## Here we download species occurrence records.
+
+spRV <- gbif("Radula ", "voluta", download = T, geo=T, sp=F)
+
+class(spRV)
+
+wRV <- which(is.na(spRV$lon))
+spRV <- spRV[-wRV,]
+wRV <- which(is.na(spRV$lat))
+spRV$species <- 1
+spRV <- spRV[,c('lon', 'lat','species')]
+head(spRV)
+
+# convert to spatial point
+
+coordinates(spRV) <- ~lon + lat
+class(spRV)
+head(spRV)
+
+plot(UK_Data_current1[[1]])
+points(spRV, cex=0.5, pch=16)
+
+proj4string(spRV) <- projection(raster())
+mapview(spRV)
+
+head(spRV)
+nrow(spRV)
+
+
+dRV<- sdmData(species~., spRV, predictors = UK_Data_current1, bg = list(n=1000))
+dRV
+
+getmethodNames()
+mRV <- sdm(species~., dRV, methods = c('glm', 'svm', 'rf', 'brt', 'mars'), replications=c('boot'),n=10)
+
+mRV
+
+pRV <- predict(mRV, UK_Data_current1)
+pRV
+
+plot(pRV[[5]], xlim=c(-12, 5), ylim=c(48, 64), xlab="Longitude", ylab="Latitude", main="Radula voluta")
+
+###############################################################################
+
+## Colura calyptrifolia
+
+## Here we download species occurrence records.
+
+spCC <- gbif("Colura ", "calyptrifolia", download = T, geo=T, sp=F)
+
+class(spCC)
+
+wCC <- which(is.na(spCC$lon))
+spCC <- spCC[-wCC,]
+wCC <- which(is.na(spCC$lat))
+spCC$species <- 1
+spCC <- spCC[,c('lon', 'lat','species')]
+head(spCC)
+
+# convert to spatial point
+
+coordinates(spCC) <- ~lon + lat
+class(spCC)
+head(spCC)
+
+plot(UK_Data_current1[[1]])
+points(spCC, cex=0.5, pch=16)
+
+proj4string(spCC) <- projection(raster())
+mapview(spCC)
+
+head(spCC)
+nrow(spCC)
+
+
+dCC<- sdmData(species~., spCC, predictors = UK_Data_current1, bg = list(n=1000))
+dCC
+
+getmethodNames()
+mCC <- sdm(species~., dCC, methods = c('glm', 'svm', 'rf', 'brt', 'mars'), replications=c('boot'),n=10)
+
+mCC
+
+pCC <- predict(mCC, UK_Data_current1)
+pCC
+
+plot(pCC[[5]], xlim=c(-12, 5), ylim=c(48, 64), xlab="Longitude", ylab="Latitude", main="Colura caltryptrifolia")
+
+###############################################################################
+
+## Lejeunea patens
+
+## Here we download species occurrence records.
+
+spLP <- gbif("Lejeunea ", "patens", download = T, geo=T, sp=F)
+
+class(spLP)
+
+wLP <- which(is.na(spLP$lon))
+spLP <- spLP[-wLP,]
+wLP <- which(is.na(spLP$lat))
+spLP$species <- 1
+spLP <- spLP[,c('lon', 'lat','species')]
+head(spLP)
+
+# convert to spatial point
+
+coordinates(spLP) <- ~lon + lat
+class(spLP)
+head(spLP)
+
+plot(UK_Data_current1[[1]])
+points(spLP, cex=0.5, pch=16)
+
+proj4string(spLP) <- projection(raster())
+mapview(spLP)
+
+head(spLP)
+nrow(spLP)
+
+
+dLP<- sdmData(species~., spLP, predictors = UK_Data_current1, bg = list(n=1000))
+dLP
+
+getmethodNames()
+mLP <- sdm(species~., dLP, methods = c('glm', 'svm', 'rf', 'brt', 'mars'), replications=c('boot'),n=10)
+
+mLP
+
+pLP <- predict(mLP, UK_Data_current1)
+pLP
+
+plot(pLP[[5]], xlim=c(-12, 5), ylim=c(48, 64), xlab="Longitude", ylab="Latitude", main="Lejeunea patens")
+
+###############################################################################
+
+## Here we set the graphical parameters to display 1 row of 3 plots.
+
+par(mfrow=c(1,3))
+
+## Here we plot the non-ensemble SDMs. 
+
+plot(p[[27]], xlim=c(-12, 5), ylim=c(48, 64), xlab="Longitude", ylab="Latitude", main="Daltonia splachnoides (W.J.Hooker & Taylor, 1818)")
+plot(pCC[[5]], xlim=c(-12, 5), ylim=c(48, 64), xlab="Longitude", ylab="Latitude", main="Colura caltryptrifolia")
+plot(pLP[[5]], xlim=c(-12, 5), ylim=c(48, 64), xlab="Longitude", ylab="Latitude", main="Lejeunea patens")
+
+## Here we set the graphical parameters to display 3 row of 2 plots per row.
+
+par(mfrow=c(3,2))
+
+## Here we plot the non-ensemble SDMs. 
+
+plot(pRV[[5]], xlim=c(-12, 5), ylim=c(48, 64), xlab="Longitude", ylab="Latitude", main="Radula voluta")
+plot(pRH[[7]], xlim=c(-12, 5), ylim=c(48, 64), xlab="Longitude", ylab="Latitude", main="Radula holtii")
+plot(pRC[[5]], xlim=c(-12, 5), ylim=c(48, 64), xlab="Longitude", ylab="Latitude", main="Radula carringtonii")
+plot(pML[[1]], xlim=c(-12, 5), ylim=c(48, 64), xlab="Longitude", ylab="Latitude", main="Metzgeria leptoneura")
+plot(pCS[[1]], xlim=c(-12, 5), ylim=c(48, 64), xlab="Longitude", ylab="Latitude", main="Lejeunea mandonii")
+plot(pAW[[5]], xlim=c(-12, 5), ylim=c(48, 64), xlab="Longitude", ylab="Latitude", main="Acrobolbus wilsonii, VU")
+
+## Here we can plot the ensemble of the model methods by weighted average of AUC scores
+## Here we set the graphical parameters to display 3 row of 3 plots per row.
+
+par(mfrow=c(3,3))
+
+## Here we plot the an ensemble of models for each of the nine threatened species.
+
+plot(ensemble(m, UK_Data_current1, setting = list(method='weighted', stat = 'AUC')),xlim=c(-12,5), ylim=c(48,64), cex.main=2,legend.width=4,xlab="Longitude", ylab="Latitude")
+text(x= -14, y= 59.5, "A", cex = 2)
+plot(ensemble(mCC, UK_Data_current1, setting = list(method='weighted', stat = 'AUC')),xlim=c(-12,5), ylim=c(48,64), cex.main=2,legend.width=4,xlab="Longitude", ylab="Latitude")
+text(x= -14, y= 59.5, "B", cex = 2)
+plot(ensemble(mRV, UK_Data_current1, setting = list(method='weighted', stat = 'AUC')),xlim=c(-12,5), ylim=c(48,64), cex.main=2,legend.width=4,xlab="Longitude", ylab="Latitude")
+text(x= -14, y= 59.5, "C", cex = 2)
+plot(ensemble(mRH, UK_Data_current1, setting = list(method='weighted', stat = 'AUC')),xlim=c(-12,5), ylim=c(48,64), cex.main=2,legend.width=4,xlab="Longitude", ylab="Latitude")
+text(x= -14, y= 59.5, "D", cex = 2)
+plot(ensemble(mRC, UK_Data_current1, setting = list(method='weighted', stat = 'AUC')),xlim=c(-12,5), ylim=c(48,64), cex.main=2,legend.width=4,xlab="Longitude", ylab="Latitude")
+text(x= -14, y= 59.5, "E", cex = 2)
+plot(ensemble(mML, UK_Data_current1, setting = list(method='weighted', stat = 'AUC')),xlim=c(-12,5), ylim=c(48,64), cex.main=2,legend.width=4,xlab="Longitude", ylab="Latitude")
+text(x= -14, y= 59.5, "F", cex = 2)
+plot(ensemble(mCS, UK_Data_current1, setting = list(method='weighted', stat = 'AUC')),xlim=c(-12,5), ylim=c(48,64), cex.main=2,legend.width=4,xlab="Longitude", ylab="Latitude")
+text(x= -14, y= 59.5, "G", cex = 2)
+plot(ensemble(mAW, UK_Data_current1, setting = list(method='weighted', stat = 'AUC')),xlim=c(-12,5), ylim=c(48,64), cex.main=2,legend.width=4,xlab="Longitude", ylab="Latitude")
+text(x= -14, y= 59.5, "H", cex = 2)
+plot(ensemble(mLP, UK_Data_current1, setting = list(method='weighted', stat = 'AUC')),xlim=c(-12,5), ylim=c(48,64), cex.main=2,legend.width=4,xlab="Longitude", ylab="Latitude")
+text(x= -14, y= 59.5, "I", cex = 2)

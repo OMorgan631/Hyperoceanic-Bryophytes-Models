@@ -1,0 +1,433 @@
+## -------------------------------------------
+##
+## Script Name: FUTURESDMS.R
+##
+## Purpose of the script: This script uses pre-existing record data for nine
+## hyperoceanic bryophyte species. Three species (Daltonia splachnoides, Colura
+## calyptrifolia and Lejeunea patens) were identified during field observations
+## and the remaining six are threatened from extinction. These records were 
+## modeled against future predicted climate conditions using worldclim data. This
+## data is based on Shared Socio-economic Pathway 3 (SSP3). The species records
+## are used to create one species distribution model for each species using 
+## five model methods with 10 replicates for each method.  
+##
+## Author: Oliver Morgan - Swansea University MRes Student
+##
+## Date Created: September 2023
+##
+## Email: o.morgan631@gmail.com
+##
+## -------------------------------------------
+
+
+### We use these packages to enable a a number of functions.
+
+library("sdm")
+library("maptools")
+library("raster")
+library("dismo")
+library("geodata")
+library(usdm)
+library("mapview")
+library(kernlab)
+library(e1071)
+library(earth)
+library(randomForest)
+
+## Here we download the future projected worldclim data. 
+
+clim_fut <- geodata::cmip6_world(model='ACCESS-ESM1-5', ssp='370', time='2081-2100', var='bioc', download=F, res=2.5, path='data')
+
+## Here we set out the coordinates of the UK to reduce the size of the worldclim
+## data to just data of the UK.
+
+UK_extentFuture <- extent(-12,2,49,60)
+
+## Here we check for multicolinearity and remove variables. 
+
+v2 <- vifstep(as.data.frame(clim_fut))
+climatefocus2 <- exclude(clim_fut, v2)
+
+## Here we crop the worldclim data using the coordinates we set out previously.
+
+UK_Data_Fut <- crop(climatefocus2, UK_extentFuture)
+
+## Here we can inspect the data to ensure all of the UK is plotted.
+
+par(mfrow=c(1,1))
+plot(UK_Data_Fut[[5]])
+
+## Here we download species presence data for all nine species. 
+
+spLP <- gbif("Lejeunea ", "patens", download = T, geo=T, sp=F)
+spCC <- gbif("Colura ", "calyptrifolia", download = T, geo=T, sp=F)
+spRV <- gbif("Radula ", "voluta", download = T, geo=T, sp=F)
+spRH <- gbif("Radula ", "holtii", download = T, geo=T, sp=F)
+spRC <- gbif("Radula ", "carringtonii", download = T, geo=T, sp=F)
+spML <- gbif("Metzgeria ", "leptoneura", download = T, geo=T, sp=F)
+spCS <- gbif("Lejeunea ", "mandonii", download = T, geo=T, sp=F)
+spAW <- gbif("Acrobolbus ", "wilsonii", download = T, geo=T, sp=F)
+sp <- gbif("Daltonia", "splachnoides", download = T, geo=T, sp=F)
+
+###############################################################################
+###############################################################################
+
+## Lejeunea patens
+
+## Here we check that the class of the object is a data.frame. 
+
+class(spLP)
+
+## Here we remove any na values for longitude and latitude data. 
+
+wLP <- which(is.na(spLP$lon))
+spLP <- spLP[-wLP,]
+wLP <- which(is.na(spLP$lat))
+spLP$species <- 1
+spLP <- spLP[,c('lon', 'lat','species')]
+head(spLP)
+
+# convert to spatial point
+
+coordinates(spLP) <- ~lon + lat
+class(spLP)
+head(spLP)
+
+## Here we can inspect the data in the mapview package. 
+
+proj4string(spLP) <- projection(raster())
+mapview(spLP)
+
+## Here we can inspect the first row and the number of rows of the dataset.
+
+head(spLP)
+nrow(spLP)
+
+## Here we set up the SDM data that will be used to create the SDM. 
+
+dLP<- sdm::sdmData(species~. , spLP, predictors = raster::stack(UK_Data_Fut), bg = list(n=1000))
+dLP
+
+## Here we get the names of model methods we can use. Five were chosen. 
+
+getmethodNames()
+
+## Here we create the Species Distribution Model using five model methods of 
+## a single species using 10 bootstrap replicates per model method. 
+
+mLP <- sdm(species~., dLP, methods = c('glm', 'svm', 'rf', 'brt', 'mars'), replications=c('boot'),n=10)
+
+mLP
+
+## Here we can combine the results from the different models by their mean 
+## weighted AUC scores. 
+
+ensembleLP <- ensemble(mLP, raster::stack(UK_Data_Fut), setting = list(method='weights', stat="AUC"))
+
+plot(ensembleLP, xlim=c(-12,5), ylim=c(48,64), main="lejeunea patens")
+
+
+## Code from here is a repeat of the previous species unless otherwise stated. 
+
+################################################################################
+
+class(spAW)
+
+wAW <- which(is.na(spAW$lon))
+spAW <- spAW[-wAW,]
+wAW <- which(is.na(spAW$lat))
+spAW$species <- 1
+spAW <- spAW[,c('lon', 'lat','species')]
+head(spAW)
+
+coordinates(spAW) <- ~lon + lat
+class(spAW)
+head(spAW)
+
+proj4string(spAW) <- projection(raster())
+mapview(spAW)
+
+head(spAW)
+nrow(spAW)
+
+
+dAW <- sdm::sdmData(species~. , spAW, predictors = raster::stack(UK_Data_Fut), bg = list(n=1000))
+dAW
+
+getmethodNames()
+mAW <- sdm(species~., dAW, methods = c('glm', 'svm', 'rf', 'brt', 'mars'), replications=c('boot'),n=10)
+
+mAW
+
+ensembleAW <- ensemble(mAW, raster::stack(UK_Data_Fut), setting = list(method='weights', stat="AUC"))
+
+plot(ensembleAW, xlim=c(-12,5), ylim=c(48,64), main="acrobolbus wilsonii")
+
+###############################################################################
+
+class(spCS)
+
+wCS <- which(is.na(spCS$lon))
+spCS <- spCS[-wCS,]
+wCS <- which(is.na(spCS$lat))
+spCS$species <- 1
+spCS <- spCS[,c('lon', 'lat','species')]
+head(spCS)
+
+coordinates(spCS) <- ~lon + lat
+class(spCS)
+head(spCS)
+
+proj4string(spCS) <- projection(raster())
+mapview(spAW)
+
+head(spCS)
+nrow(spCS)
+
+
+dCS <- sdmData(species~., spCS, predictors = raster::stack(UK_Data_Fut), bg = list(n=1000))
+dCS
+
+getmethodNames()
+mCS <- sdm(species~., dCS, methods = c('glm', 'svm', 'rf', 'brt', 'mars'), replications=c('boot'),n=10)
+
+mCS
+
+ensembleCS <- ensemble(mCS, raster::stack(UK_Data_Fut), setting = list(method='weights', stat="AUC"))
+
+plot(ensembleCS, xlim=c(-12,5), ylim=c(48,64), main="lejeunea mandonii")
+
+###############################################################################
+
+class(spML)
+
+wML <- which(is.na(spML$lon))
+spML <- spML[-wML,]
+wML <- which(is.na(spML$lat))
+spML$species <- 1
+spML <- spML[,c('lon', 'lat','species')]
+head(spML)
+
+coordinates(spML) <- ~lon + lat
+class(spML)
+head(spML)
+
+proj4string(spML) <- projection(raster())
+mapview(spML)
+
+head(spML)
+nrow(spML)
+
+
+dML <- sdmData(species~., spML, predictors = raster::stack(UK_Data_Fut), bg = list(n=1000))
+dML
+
+getmethodNames()
+mML <- sdm(species~., dML, methods = c('glm', 'svm', 'rf', 'brt', 'mars'), replications=c('boot'),n=10)
+
+mML
+
+ensembleML <- ensemble(mML, raster::stack(UK_Data_Fut), setting = list(method='weights', stat="AUC"))
+
+plot(ensembleML, xlim=c(-12,5), ylim=c(48,64), main="metzgeria leptoneura")
+
+###############################################################################
+
+class(spRC)
+
+wRC <- which(is.na(spRC$lon))
+spRC <- spRC[-wRC,]
+wRC <- which(is.na(spRC$lat))
+spRC$species <- 1
+spRC <- spRC[,c('lon', 'lat','species')]
+head(spRC)
+
+coordinates(spRC) <- ~lon + lat
+class(spRC)
+head(spRC)
+
+proj4string(spRC) <- projection(raster())
+mapview(spRC)
+
+head(spRC)
+nrow(spRC)
+
+
+dRC <- sdmData(species~., spRC, predictors = raster::stack(UK_Data_Fut), bg = list(n=1000))
+dRC
+
+getmethodNames()
+mRC <- sdm(species~., dRC, methods = c('glm', 'svm', 'rf', 'brt', 'mars'), replications=c('boot'),n=10)
+
+mRC
+
+ensembleRC <- ensemble(mRC, raster::stack(UK_Data_Fut), setting = list(method='weighted', stat="AUC"))
+
+plot(ensembleRC, xlim=c(-12,5), ylim=c(48,64), main="radula carringtonii")
+
+###############################################################################
+
+class(spRH)
+
+wRH <- which(is.na(spRH$lon))
+spRH <- spRH[-wRH,]
+wRH <- which(is.na(spRH$lat))
+spRH$species <- 1
+spRH <- spRH[,c('lon', 'lat','species')]
+head(spRH)
+
+coordinates(spRH) <- ~lon + lat
+class(spRH)
+head(spRH)
+
+proj4string(spRH) <- projection(raster())
+mapview(spRH)
+
+head(spRH)
+nrow(spRH)
+
+
+dRH<- sdmData(species~., spRH, predictors = raster::stack(UK_Data_Fut), bg = list(n=1000))
+dRH
+
+getmethodNames()
+mRH <- sdm(species~., dRH, methods = c('glm', 'svm', 'rf', 'brt', 'mars'), replications=c('boot'),n=10)
+
+mRH
+
+ensembleRH <- ensemble(mRH, raster::stack(UK_Data_Fut), setting = list(method='weights', stat="AUC"))
+
+plot(ensembleRH, xlim=c(-12,5), ylim=c(48,64), main="radula holtii")
+
+###############################################################################
+
+class(spRV)
+
+wRV <- which(is.na(spRV$lon))
+spRV <- spRV[-wRV,]
+wRV <- which(is.na(spRV$lat))
+spRV$species <- 1
+spRV <- spRV[,c('lon', 'lat','species')]
+head(spRV)
+
+coordinates(spRV) <- ~lon + lat
+class(spRV)
+head(spRV)
+
+proj4string(spRV) <- projection(raster())
+mapview(spRV)
+
+head(spRV)
+nrow(spRV)
+
+
+dRV<- sdmData(species~., spRV, predictors = raster::stack(UK_Data_Fut), bg = list(n=1000))
+dRV
+
+getmethodNames()
+mRV <- sdm(species~., dRV, methods = c('glm', 'svm', 'rf', 'brt', 'mars'), replications=c('boot'),n=10)
+
+mRV
+
+ensembleRV <- ensemble(mRV, raster::stack(UK_Data_Fut), setting = list(method='weights', stat="AUC"))
+
+plot(ensembleRV, xlim=c(-12,5), ylim=c(48,64), main="radula voluta")
+
+###############################################################################
+
+class(spCC)
+
+wCC <- which(is.na(spCC$lon))
+spCC <- spCC[-wCC,]
+wCC <- which(is.na(spCC$lat))
+spCC$species <- 1
+spCC <- spCC[,c('lon', 'lat','species')]
+head(spCC)
+
+coordinates(spCC) <- ~lon + lat
+class(spCC)
+head(spCC)
+
+proj4string(spCC) <- projection(raster())
+mapview(spCC)
+
+head(spCC)
+nrow(spCC)
+
+
+dCC<- sdmData(species~., spCC, predictors = raster::stack(UK_Data_Fut), bg = list(n=1000))
+dCC
+
+getmethodNames()
+mCC <- sdm(species~., dCC, methods = c('glm', 'svm', 'rf', 'brt', 'mars'), replications=c('boot'),n=10)
+
+mCC
+
+ensembleCC <- ensemble(mCC, raster::stack(UK_Data_Fut), setting = list(method='weighted', stat="AUC"))
+
+plot(ensembleCC, xlim=c(-12,5), ylim=c(48,64), main="Colura Caltryp")
+
+###############################################################################
+
+class(sp)
+
+w <- which(is.na(sp$lon))
+sp <- sp[-w,]
+w <- which(is.na(sp$lat))
+sp$species <- 1
+sp <- sp[,c('lon', 'lat','species')]
+head(sp)
+
+coordinates(sp) <- ~lon + lat
+class(sp)
+head(sp)
+
+proj4string(sp) <- projection(raster())
+mapview(sp)
+
+head(sp)
+nrow(sp)
+
+d <- sdmData(species~., sp, predictors = raster::stack(UK_Data_Fut), bg = list(n=1000))
+d
+
+getmethodNames()
+m <- sdm(species~., d, methods = c('glm', 'svm', 'rf', 'brt', 'mars'), replications=c('boot'),n=10)
+
+m
+
+ensembleM <- ensemble(m, raster::stack(UK_Data_Fut), setting = list(method='weights', stat="AUC"))
+
+plot(ensembleM, xlim=c(-12,5), ylim=c(48,64), main="Daltonia")
+
+###############################################################################
+
+
+## Now that all models have been created we can begin to plot them.
+
+## First we set out the graphical parameters for nine plots across three rows
+## with three raster maps per row.
+
+par(mfrow=c(3,3))
+
+## Here we plot each model, label the X and Y axes and add a letter (A-I) for
+## use within the thesis. 
+
+plot(ensembleM, xlim=c(-12,5), ylim=c(48,64), cex.main=2,legend.width=4,xlab="Longitude", ylab="Latitude")
+text(x= -14, y= 59.5, "A", cex = 2)
+plot(ensembleCC, xlim=c(-12,5), ylim=c(48,64), cex.main=2,legend.width=4,xlab="Longitude", ylab="Latitude")
+text(x= -14, y= 59.5, "B", cex = 2)
+plot(ensembleRV, xlim=c(-12,5), ylim=c(48,64), cex.main=2,legend.width=4,xlab="Longitude", ylab="Latitude")
+text(x= -14, y= 59.5, "C", cex = 2)
+plot(ensembleRH, xlim=c(-12,5), ylim=c(48,64), cex.main=2,legend.width=4,xlab="Longitude", ylab="Latitude")
+text(x= -14, y= 59.5, "D", cex = 2)
+plot(ensembleRC, xlim=c(-12,5), ylim=c(48,64), cex.main=2,legend.width=4,xlab="Longitude", ylab="Latitude")
+text(x= -14, y= 59.5, "E", cex = 2)
+plot(ensembleML, xlim=c(-12,5), ylim=c(48,64), cex.main=2,legend.width=4,xlab="Longitude", ylab="Latitude")
+text(x= -14, y= 59.5, "F", cex = 2)
+plot(ensembleCS, xlim=c(-12,5), ylim=c(48,64), cex.main=2,legend.width=4,xlab="Longitude", ylab="Latitude")
+text(x= -14, y= 59.5, "G", cex = 2)
+plot(ensembleAW, xlim=c(-12,5), ylim=c(48,64), cex.main=2,legend.width=4,xlab="Longitude", ylab="Latitude")
+text(x= -14, y= 59.5, "H", cex = 2)
+plot(ensembleLP, xlim=c(-12,5), ylim=c(48,64), cex.main=2,legend.width=4,xlab="Longitude", ylab="Latitude")
+text(x= -14, y= 59.5, "I", cex = 2)
