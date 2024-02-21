@@ -22,7 +22,7 @@ All packages used within the project are outlined within the respective .r file 
 
 ## Getting Started
 
-To use the code, open the file within R and run one line of code at a time as issues to arise when trying to run the entire code at the same time. 
+To use the code, open one of the files (Current Distribution Model.txt / FUTURESDMS.txt) within R and run one line of code at a time as issues to arise when trying to run the entire code at the same time. 
 
 ## Collaborators
 
